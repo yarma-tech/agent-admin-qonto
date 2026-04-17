@@ -215,6 +215,23 @@ Used by `pending-payments` to exclude already-paid conversions. If lost, reports
 
 ---
 
+## Known limitations
+
+### Product individual endpoints return 404
+
+`GET /v2/products/{id}` and `DELETE /v2/products/{id}` return `404 Not Found` on our test Qonto Business account, even when the product is clearly present in `GET /v2/products` (list). This affects the `product-update` and `product-delete` CLI commands — they will fail with a clear error message pointing to the web UI.
+
+- **Status** as of 2026-04-16: reproducible with both UI-created and API-created products, across four URL variants (`/v2/products/{id}`, `/v2/products/{id}/`, `/v2/catalog/products/{id}`, `/v2/products?id=…`). The endpoint documentation explicitly lists `SecretKey` as an accepted auth method, so this is not a scope/auth issue.
+- **Workaround**: manage product updates and deletions via the Qonto web interface (<https://app.qonto.com> → Billing → Products). `product-list`, `product-find` and `product-create` continue to work normally through the API.
+
+If you can reproduce this with your own Qonto account, consider opening a support ticket with Qonto.
+
+### No CC/BCC on email sending
+
+Qonto's `send-a-quote` and `send-a-client-invoice` endpoints only accept `send_to` (array) and `copy_to_self` (boolean). There is no `cc` or `bcc` field. For multi-recipient sends, list all addresses in `send_to`.
+
+---
+
 ## Roadmap
 
 Phase 2 (not yet implemented): a Telegram bot wrapper in `telegram/` that accepts voice and text messages, transcribes voice through Whisper, and routes to the same CLI commands. Same confirmation flow as the Claude Code skill.
