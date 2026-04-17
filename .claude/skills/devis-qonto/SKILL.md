@@ -60,13 +60,19 @@ Les `--json` prennent le chemin vers un fichier JSON temporaire que tu crées da
 
 **Déclencheurs** : "devis pour X", "nouveau devis", "crée un devis"
 
-1. **Extrait** : client (nom), items (titre + quantité + prix HT), remises (par item ou globale), dates
+1. **Extrait** : client (nom), items (titre + quantité + éventuel prix HT + éventuelle description custom), remises (par item ou globale), dates
 2. **Résous le client** :
    - Appelle `client-find "<nom>"`.
    - 1 match exact → utilise directement.
    - Plusieurs matchs → présente la liste numérotée, demande lequel.
    - 0 match → demande à Yannick : "client inconnu, on le crée ? Il me faut nom, email, adresse, SIRET." puis `client-create`.
-3. **Construis le payload** (écris-le dans `/tmp/devis-qonto-quote-<ts>.json`) :
+3. **Résous chaque item via le catalogue articles** (règle importante) :
+   - Pour chaque item demandé, appelle `product-find "<titre>"` pour trouver l'article catalogue.
+   - **Si trouvé** : copie **textuellement** `title`, `description`, `unit_price`, `vat_rate` depuis le catalogue. Seule la `quantity` (et éventuellement une `discount`) viennent de la demande de Yannick.
+   - **Si l'utilisateur a précisé une description spécifique** ("avec comme description X", "décris ça comme Y") : utilise la version custom.
+   - **Si l'utilisateur a précisé un tarif différent** du catalogue : demande confirmation avant d'override ("le tarif catalogue est 800€/j, tu veux vraiment 900€ sur ce devis ?").
+   - **Si 0 match catalogue** : demande à Yannick le titre, la description, le prix HT, la TVA.
+4. **Construis le payload** (écris-le dans `/tmp/devis-qonto-quote-<ts>.json`) :
    ```json
    {
      "client_id": "<uuid>",
@@ -75,29 +81,34 @@ Les `--json` prennent le chemin vers un fichier JSON temporaire que tu crées da
      "currency": "EUR",
      "items": [
        {
-         "title": "Prestation mars 2026",
-         "quantity": "1",
-         "unit_price": { "value": "1500.00", "currency": "EUR" },
+         "title": "Tournage",
+         "description": "Participation au tournage pour une OP d'influence du client",
+         "quantity": "2",
+         "unit_price": { "value": "800.00", "currency": "EUR" },
          "vat_rate": "0.085"
        }
      ]
    }
    ```
-4. **Présente un résumé** à Yannick avec ce format :
+5. **Présente un résumé** à Yannick en indiquant la source de chaque description :
    ```
    DEVIS — <nom client>
    Émission : 16/04/2026 · Validité : 16/05/2026
    
-   - Prestation mars 2026 | 1 × 1500.00€ HT (TVA 8.5%)
+   Item 1 : Tournage × 2j — 800.00€ HT (TVA 8.5%)
+     Description (depuis catalogue) : "Participation au tournage pour une OP d'influence du client"
    
-   HT : 1500.00€
-   TVA : 127.50€
-   TTC : 1627.50€
+   Item 2 : Montage × 5j — 450.00€ HT (TVA 8.5%)
+     Description (depuis catalogue) : "Suivi des étapes de post-production - Derush - Montage - Révision..."
+   
+   HT : 3850.00€
+   TVA : 327.25€
+   TTC : 4177.25€
    ```
-   Puis demande : "Je crée ?"
-5. **Sur validation** : `node src/cli.js quote-create --json <path>` → récupère `id`, `number`, `pdf_path`
-6. **Ouvre le PDF dans Adobe Acrobat** : `open -a "Adobe Acrobat" <pdf_path>` (macOS). N'utilise PAS `open <path>` tout court — ça ouvre dans Aperçu par défaut.
-7. **Propose l'envoi email** : "envoyer à `<email_client>` ? (copie à toi : oui)"
+   Indique clairement `(depuis catalogue)` ou `(description custom)` pour chaque item. Puis demande : "Je crée ? Ou tu veux ajuster une description ?"
+6. **Sur validation** : `node src/cli.js quote-create --json <path>` → récupère `id`, `number`, `pdf_path`
+7. **Ouvre le PDF dans Adobe Acrobat** : `open -a "Adobe Acrobat" <pdf_path>` (macOS). N'utilise PAS `open <path>` tout court — ça ouvre dans Aperçu par défaut.
+9. **Propose l'envoi email** : "envoyer à `<email_client>` ? (copie à toi : oui)"
    - Si oui → crée `/tmp/devis-qonto-send-<ts>.json` avec `{ "send_to": ["<email>"], "email_title": "Devis <number>", "copy_to_self": true }` puis `quote-send --id <id> --json <path>`
    - L'email part depuis Qonto, pas depuis `contact@karata.fr`.
 
@@ -206,8 +217,12 @@ Identique au devis, mais :
 ### 10. CRUD articles
 
 - **Créer** : `"article 'Consulting jour' à 500€ HT TVA 8.5%"` → `product-create`
-- **Modifier** : ⚠️ **avertis toujours** Yannick : "cela va supprimer l'article actuel et en créer un nouveau avec un nouvel ID. Les devis/factures historiques ne sont pas affectés. Continuer ?". Sur validation → `product-update --id --json <nouveau payload complet>`
-- **Supprimer** : confirmation obligatoire → `product-delete --id`
+- **Lister / Rechercher** : `product-list`, `product-find`
+- **Modifier / Supprimer** : ⚠️ **Limitation Qonto** — les endpoints `DELETE /v2/products/{id}` et `GET /v2/products/{id}` retournent 404 sur ce compte (bug ou restriction Qonto, vérifié le 16/04/2026). Les commandes `product-update` et `product-delete` échoueront avec un message clair. Oriente Yannick vers l'interface web : <https://app.qonto.com> → Facturation → Articles. Une fois la modification faite côté web, `product-list` reflétera le nouvel état.
+
+**Important — descriptions catalogue vs devis** :
+- Modifier la **description d'un article catalogue** (ex. "change la description du Tournage pour X") → via interface web Qonto uniquement (voir ci-dessus).
+- Modifier la **description d'un item sur un devis spécifique** (ex. "sur le devis DEV-042, remplace la description du Tournage par X") → via `quote-update --id --json` (brouillon uniquement). Cela ne touche pas l'article catalogue, juste ce devis.
 
 ## Règles de sécurité (guardrails)
 
@@ -215,7 +230,7 @@ Identique au devis, mais :
 2. **Jamais d'envoi email automatique** : confirmation obligatoire (destinataire + montant visibles).
 3. **Finalisation de facture = immuable** : confirmation explicite avec message "une fois finalisée, la facture ne pourra plus être modifiée".
 4. **Modification de doc finalisé = refus** avec message clair (pas de tentative de workaround).
-5. **Produit update = avertir du nouvel ID** avant le delete+recreate.
+5. **Produit update/delete via API = 404 sur ce compte Qonto** → oriente vers l'interface web.
 6. **Pas de `quote-delete` / `invoice-delete` / `client-delete`** exposés dans le CLI. Si Yannick demande, oriente vers l'interface web Qonto.
 7. **Dates relatives** ("mars", "semaine prochaine") : résous en ISO (`YYYY-MM-DD`) avant l'appel CLI. Date courante = 2026-04-16.
 8. **Montants** toujours en string (`"1500.00"`), **TVA en fraction décimale** (`"0.085"` pour 8.5%, `"0.2"` pour 20%, `"0"` pour exonéré), remises en string (`"10"`).
