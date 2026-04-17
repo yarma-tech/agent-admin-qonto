@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Planned (Phase 2)
+
+- Telegram bot wrapper: voice + text messages routed to the CLI.
+- **Brief-to-quote** generation: parse a client brief (PDF / email / text), draft a quote via catalog matching, then run a verification pass comparing the draft back to the brief to surface discrepancies before user validation. See the Roadmap section of the README for details.
+
 ## [0.1.0] — 2026-04-16
 
 ### Added

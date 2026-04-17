@@ -234,7 +234,41 @@ Qonto's `send-a-quote` and `send-a-client-invoice` endpoints only accept `send_t
 
 ## Roadmap
 
-Phase 2 (not yet implemented): a Telegram bot wrapper in `telegram/` that accepts voice and text messages, transcribes voice through Whisper, and routes to the same CLI commands. Same confirmation flow as the Claude Code skill.
+### Phase 2 — Telegram agent
+
+A Telegram bot wrapper in `telegram/` that accepts voice and text messages, transcribes voice through Whisper, and routes to the same CLI commands. Same confirmation flow as the Claude Code skill.
+
+### Phase 2 — Brief-to-quote generation with verification
+
+Take a client brief (PDF, email body, meeting notes, plain text) as input and generate a matching quote draft, then run a verification pass that compares the draft back against the brief to surface any discrepancies before the user validates.
+
+**Flow sketch**:
+1. User provides a brief — path to a file, pasted text, or a Telegram attachment.
+2. The agent extracts from the brief:
+   - Deliverables (what's being produced)
+   - Timeline / dates
+   - Scope constraints and explicit exclusions
+   - Any budget or rate constraint the client mentioned
+   - Client identity, project name
+3. The agent maps each deliverable to a catalog article via `product-find`. Falls back to ad-hoc items with a warning if no match.
+4. The agent drafts a quote payload (uses catalog descriptions by default, applies existing VAT and discount rules).
+5. **Verification pass** — a distinct step that compares the drafted quote back to the original brief. Flags, at minimum:
+   - Deliverables in the brief absent from the quote
+   - Quote items not mentioned in the brief
+   - Quantity mismatches (brief says "a week of editing", quote has 2 days)
+   - Timeline mismatches (brief deadline vs quote expiry)
+   - Budget mismatch (brief says "max 5k", quote totals 7k)
+   - Catalog matches with low confidence (agent guessed)
+6. Present the draft + verification report to the user. The user either validates (→ `quote-create`), adjusts specific items, or requests a re-run with clarifications.
+
+**Open questions to resolve at implementation time**:
+- Does "corresponds to reality" mean *corresponds to the brief* (scope), *corresponds to team capacity* (can we deliver on this timeline?), or *corresponds to historical pricing* (have we done similar at this rate)? Likely the first — to confirm.
+- Should verification use a separate agent/LLM pass to reduce confirmation bias, or is a single-agent structured checklist enough?
+- Batch mode (process multiple briefs in a folder) — yes/no?
+
+**Not in scope for this feature**:
+- Automated quote signing by the client (Qonto handles this through its portal)
+- Contract generation — this is quoting only
 
 ---
 
