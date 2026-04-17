@@ -8,7 +8,7 @@
       "title": "Consulting service — March 2026",
       "quantity": "1",
       "unit_price": { "value": "1500.00", "currency": "EUR" },
-      "vat_rate": "8.5"
+      "vat_rate": "0.085"
     }
   ]
 }

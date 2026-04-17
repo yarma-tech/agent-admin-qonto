@@ -41,15 +41,9 @@ export async function findInvoices(term) {
 
 export async function createInvoice(payload, { finalize = false } = {}) {
   validateDiscounts(payload);
-  const data = await apiFetch('POST', '/client_invoices', { body: { client_invoice: payload } });
+  const data = await apiFetch('POST', '/client_invoices', { body: payload });
   let invoice = data.client_invoice ?? data;
-  if (finalize) {
-    invoice = await finalizeInvoice(invoice.id);
-  }
-  if (invoice.status !== 'draft') {
-    const pdfPath = await downloadInvoicePdf(invoice);
-    return { ...invoice, pdf_path: pdfPath };
-  }
+  if (finalize) return finalizeInvoice(invoice.id);
   return invoice;
 }
 
@@ -59,15 +53,15 @@ export async function updateInvoice(id, patch) {
     throw new Error(`Invoice ${current.number ?? id} is ${current.status}, only drafts can be modified.`);
   }
   validateDiscounts({ ...current, ...patch });
-  const data = await apiFetch('PUT', `/client_invoices/${id}`, { body: { client_invoice: patch } });
+  const data = await apiFetch('PUT', `/client_invoices/${id}`, { body: patch });
   return data.client_invoice ?? data;
 }
 
 export async function finalizeInvoice(id) {
-  const data = await apiFetch('POST', `/client_invoices/${id}/finalize`);
-  const invoice = data.client_invoice ?? data;
-  const pdfPath = await downloadInvoicePdf(invoice);
-  return { ...invoice, pdf_path: pdfPath };
+  await apiFetch('POST', `/client_invoices/${id}/finalize`);
+  const full = await retrieveInvoice(id);
+  const pdfPath = await downloadInvoicePdf(full);
+  return { ...full, pdf_path: pdfPath };
 }
 
 export async function sendInvoice(id, { sendTo, emailTitle, emailBody, copyToSelf = true }) {

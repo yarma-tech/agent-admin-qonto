@@ -40,10 +40,11 @@ export async function findQuotes(term) {
 
 export async function createQuote(payload) {
   validateDiscounts(payload);
-  const data = await apiFetch('POST', '/quotes', { body: { quote: payload } });
-  const quote = data.quote ?? data;
-  const pdfPath = await downloadQuotePdf(quote);
-  return { ...quote, pdf_path: pdfPath };
+  const data = await apiFetch('POST', '/quotes', { body: payload });
+  const created = data.quote ?? data;
+  const full = await retrieveQuote(created.id);
+  const pdfPath = await downloadQuotePdf(full);
+  return { ...full, pdf_path: pdfPath };
 }
 
 export async function updateQuote(id, patch) {
@@ -52,7 +53,7 @@ export async function updateQuote(id, patch) {
     throw new Error(`Quote ${current.number ?? id} is ${current.status}, only drafts can be modified.`);
   }
   validateDiscounts({ ...current, ...patch });
-  const data = await apiFetch('PATCH', `/quotes/${id}`, { body: { quote: patch } });
+  const data = await apiFetch('PATCH', `/quotes/${id}`, { body: patch });
   return data.quote ?? data;
 }
 

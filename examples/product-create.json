@@ -2,6 +2,6 @@
   "title": "Consulting — daily rate",
   "description": "One day of consulting work",
   "unit_price": { "value": "500.00", "currency": "EUR" },
-  "vat_rate": "8.5",
+  "vat_rate": "0.085",
   "unit": "day"
 }

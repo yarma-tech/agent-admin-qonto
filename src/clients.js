@@ -13,12 +13,12 @@ export async function retrieveClient(id) {
 }
 
 export async function createClient(payload) {
-  const data = await apiFetch('POST', '/clients', { body: { client: payload } });
+  const data = await apiFetch('POST', '/clients', { body: payload });
   return data.client ?? data;
 }
 
 export async function updateClient(id, patch) {
-  const data = await apiFetch('PATCH', `/clients/${id}`, { body: { client: patch } });
+  const data = await apiFetch('PATCH', `/clients/${id}`, { body: patch });
   return data.client ?? data;
 }
 

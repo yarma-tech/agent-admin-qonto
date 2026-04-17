@@ -144,6 +144,10 @@ Both quotes and invoices support per-item and global discounts using the same sh
 
 `type` is `"percentage"` or `"amount"`. `value` is always a string. You can combine per-item discounts with a global discount. The CLI rejects percentages above 100 and negative values.
 
+### VAT rate format
+
+Qonto expects VAT rates as **decimal fractions** passed as strings: `"0.085"` means 8.5%, `"0.2"` means 20%, `"0"` means exempt. This applies everywhere the API takes a `vat_rate` field (products, quote items, invoice items).
+
 See [examples/quote-with-discount.json](examples/quote-with-discount.json).
 
 ---

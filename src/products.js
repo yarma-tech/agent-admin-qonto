@@ -11,7 +11,7 @@ export async function retrieveProduct(id) {
 }
 
 export async function createProduct(payload) {
-  const data = await apiFetch('POST', '/products', { body: { product: payload } });
+  const data = await apiFetch('POST', '/products', { body: payload });
   return data.product ?? data;
 }
 

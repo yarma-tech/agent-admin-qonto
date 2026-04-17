@@ -26,7 +26,7 @@ Vérifie que `.env` existe dans le projet. Si `ping` retourne une erreur d'auth,
 | `expiry_date` (devis) | issue_date + 30 jours |
 | `due_date` (facture) | issue_date + 30 jours |
 | `currency` | `EUR` |
-| `vat_rate` (par item) | `"8.5"` (DOM) |
+| `vat_rate` (par item) | `"0.085"` (DOM — format fraction décimale) |
 | `number` | auto Qonto (ne pas envoyer de `number` manuel) |
 | Statut facture initial | brouillon (`--finalize` uniquement sur confirmation) |
 
@@ -78,7 +78,7 @@ Les `--json` prennent le chemin vers un fichier JSON temporaire que tu crées da
          "title": "Prestation mars 2026",
          "quantity": "1",
          "unit_price": { "value": "1500.00", "currency": "EUR" },
-         "vat_rate": "8.5"
+         "vat_rate": "0.085"
        }
      ]
    }
@@ -96,7 +96,7 @@ Les `--json` prennent le chemin vers un fichier JSON temporaire que tu crées da
    ```
    Puis demande : "Je crée ?"
 5. **Sur validation** : `node src/cli.js quote-create --json <path>` → récupère `id`, `number`, `pdf_path`
-6. **Ouvre le PDF** : `open <pdf_path>` (macOS)
+6. **Ouvre le PDF dans Adobe Acrobat** : `open -a "Adobe Acrobat" <pdf_path>` (macOS). N'utilise PAS `open <path>` tout court — ça ouvre dans Aperçu par défaut.
 7. **Propose l'envoi email** : "envoyer à `<email_client>` ? (copie à toi : oui)"
    - Si oui → crée `/tmp/devis-qonto-send-<ts>.json` avec `{ "send_to": ["<email>"], "email_title": "Devis <number>", "copy_to_self": true }` puis `quote-send --id <id> --json <path>`
    - L'email part depuis Qonto, pas depuis `contact@karata.fr`.
@@ -218,7 +218,7 @@ Identique au devis, mais :
 5. **Produit update = avertir du nouvel ID** avant le delete+recreate.
 6. **Pas de `quote-delete` / `invoice-delete` / `client-delete`** exposés dans le CLI. Si Yannick demande, oriente vers l'interface web Qonto.
 7. **Dates relatives** ("mars", "semaine prochaine") : résous en ISO (`YYYY-MM-DD`) avant l'appel CLI. Date courante = 2026-04-16.
-8. **Montants** toujours en string (`"1500.00"`), TVA aussi (`"8.5"`), remises aussi (`"10"`).
+8. **Montants** toujours en string (`"1500.00"`), **TVA en fraction décimale** (`"0.085"` pour 8.5%, `"0.2"` pour 20%, `"0"` pour exonéré), remises en string (`"10"`).
 
 ## Gestion des erreurs
 
