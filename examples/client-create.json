@@ -1,0 +1,15 @@
+{
+  "type": "company",
+  "name": "ACME Corporation",
+  "email": "billing@acme.example",
+  "vat_number": "FR00000000000",
+  "tax_identification_number": "00000000000000",
+  "currency": "EUR",
+  "locale": "FR",
+  "billing_address": {
+    "street_address": "1 Example Street",
+    "city": "Paris",
+    "zip_code": "75001",
+    "country_code": "FR"
+  }
+}

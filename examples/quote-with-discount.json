@@ -1,0 +1,22 @@
+{
+  "client_id": "00000000-0000-0000-0000-000000000000",
+  "issue_date": "2026-04-16",
+  "expiry_date": "2026-05-16",
+  "currency": "EUR",
+  "items": [
+    {
+      "title": "Consulting — phase 1",
+      "quantity": "1",
+      "unit_price": { "value": "2000.00", "currency": "EUR" },
+      "vat_rate": "8.5",
+      "discount": { "type": "percentage", "value": "5" }
+    },
+    {
+      "title": "Consulting — phase 2",
+      "quantity": "1",
+      "unit_price": { "value": "1500.00", "currency": "EUR" },
+      "vat_rate": "8.5"
+    }
+  ],
+  "discount": { "type": "percentage", "value": "10" }
+}

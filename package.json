@@ -1,0 +1,35 @@
+{
+  "name": "agent-admin-qonto",
+  "version": "0.1.0",
+  "description": "CLI and Claude Code skill to manage Qonto quotes, invoices, clients and products from the terminal or conversationally.",
+  "type": "module",
+  "main": "src/cli.js",
+  "bin": {
+    "agent-admin-qonto": "src/cli.js"
+  },
+  "scripts": {
+    "start": "node src/cli.js",
+    "ping": "node src/cli.js ping"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "qonto",
+    "invoice",
+    "quote",
+    "billing",
+    "cli",
+    "claude-code"
+  ],
+  "author": "yarma-tech",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yarma-tech/agent-admin-qonto.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yarma-tech/agent-admin-qonto/issues"
+  },
+  "homepage": "https://github.com/yarma-tech/agent-admin-qonto#readme"
+}

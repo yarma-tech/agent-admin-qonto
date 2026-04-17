@@ -1,0 +1,36 @@
+# Credentials
+.env
+.env.local
+.env.*.local
+
+# Runtime data
+state.json
+
+# Generated PDFs (client-confidential)
+pdf/*.pdf
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Logs
+logs/
+*.log
