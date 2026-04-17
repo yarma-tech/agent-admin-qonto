@@ -47,10 +47,14 @@ export async function createQuote(payload) {
   return { ...full, pdf_path: pdfPath };
 }
 
+const MUTABLE_QUOTE_STATUSES = new Set(['draft', 'pending_approval']);
+
 export async function updateQuote(id, patch) {
   const current = await retrieveQuote(id);
-  if (current.status && current.status !== 'draft') {
-    throw new Error(`Quote ${current.number ?? id} is ${current.status}, only drafts can be modified.`);
+  if (current.status && !MUTABLE_QUOTE_STATUSES.has(current.status)) {
+    throw new Error(
+      `Quote ${current.number ?? id} is ${current.status}, only pending_approval or draft quotes can be modified.`
+    );
   }
   validateDiscounts({ ...current, ...patch });
   const data = await apiFetch('PATCH', `/quotes/${id}`, { body: patch });
