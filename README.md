@@ -238,6 +238,24 @@ Qonto's `send-a-quote` and `send-a-client-invoice` endpoints only accept `send_t
 
 A Telegram bot wrapper in `telegram/` that accepts voice and text messages, transcribes voice through Whisper, and routes to the same CLI commands. Same confirmation flow as the Claude Code skill.
 
+### Phase 2 — MCP server (expose write operations over Model Context Protocol)
+
+Qonto ships an [official MCP server](https://github.com/qonto/qonto-mcp-server) that covers **read** operations (transactions, invoices list, statements, transfers). It does not expose **write** operations for quotes, invoices, products, or email sending.
+
+This project already implements those write operations. Exposing them through MCP would let any MCP client (Claude Desktop, Cursor, Zed, custom agents) call them without needing a project-local skill. The two MCP servers co-exist : the official one for reads, this one for writes.
+
+**Scope**:
+- Wrap the existing CLI commands as MCP tools using [`@modelcontextprotocol/sdk`](https://github.com/modelcontextprotocol/typescript-sdk) (Node.js, stays consistent with the current stack)
+- Expose, at minimum: `quote_create`, `quote_update`, `quote_send`, `quote_validate`, `invoice_create`, `invoice_update`, `invoice_finalize`, `invoice_send`, `invoice_mark_paid`, `invoice_cancel`, `client_create`, `client_update`, `product_create`, `pending_payments`
+- Keep read-only mirrors of list/find commands for convenience, even if they overlap with the official server
+- Package as Docker image (mirroring the official server's distribution model) and publish to `ghcr.io/yarma-tech/agent-admin-qonto`
+- Same credential model (`.env` passed as env vars to the container)
+- Preserve the confirmation-based safety flow: the MCP tool returns a "preview" structured response that the client must confirm before a second "execute" call — since MCP clients can auto-approve tools, this two-step pattern is the server-side guardrail equivalent of the skill's resolve → summarize → confirm loop
+
+**Migration path**: the Claude Code skill at `.claude/skills/devis-qonto/SKILL.md` stays. Users on Claude Code can keep the skill (FR conversation) or switch to the MCP server (works from any client). The CLI stays as the execution backbone for both.
+
+**Open question**: is the project better published as two separate entry points (CLI + MCP server) or a single MCP server with an optional `--cli` mode? Decide at implementation time.
+
 ### Phase 2 — Brief-to-quote generation with verification
 
 Take a client brief (PDF, email body, meeting notes, plain text) as input and generate a matching quote draft, then run a verification pass that compares the draft back against the brief to surface any discrepancies before the user validates.
