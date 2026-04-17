@@ -109,7 +109,9 @@ function assertDiscount(discount, label) {
   if (!Number.isFinite(num) || num < 0) {
     throw new Error(`Invalid discount on ${label}: value must be a non-negative number.`);
   }
-  if (type === 'percentage' && num > 100) {
-    throw new Error(`Invalid discount on ${label}: percentage > 100%.`);
+  if (type === 'percentage' && num > 1) {
+    throw new Error(
+      `Invalid discount on ${label}: percentage value must be a decimal fraction between 0 and 1 (e.g. "0.20" for 20%), got "${value}".`
+    );
   }
 }
