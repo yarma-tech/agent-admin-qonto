@@ -8,6 +8,7 @@ import * as quotes from './quotes.js';
 import * as invoices from './invoices.js';
 import { validateQuote } from './validate.js';
 import { pendingPayments } from './reports.js';
+import { getPdfDestination, setPdfDestination } from './state.js';
 
 function parseArgs(argv) {
   const args = { _: [] };
@@ -188,6 +189,17 @@ const commands = {
 
   async 'pending-payments'(args) {
     out(await pendingPayments({ detailed: Boolean(args.detailed) }));
+  },
+
+  async 'pdf-dir'(args) {
+    if (args.set !== undefined) {
+      const next = args.set === true || args.set === '' ? null : String(args.set);
+      const saved = await setPdfDestination(next);
+      out({ pdf_destination: saved, updated: true });
+      return;
+    }
+    const current = await getPdfDestination();
+    out({ pdf_destination: current, default_if_unset: 'pdf/ (project folder)' });
   },
 
   async help() {

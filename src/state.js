@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATE_PATH = path.resolve(__dirname, '..', 'state.json');
 
-const EMPTY_STATE = { validated_quotes: {} };
+const EMPTY_STATE = { validated_quotes: {}, pdf_destination: null };
 
 export async function readState() {
   try {
@@ -22,6 +22,18 @@ export async function writeState(state) {
   const tmp = `${STATE_PATH}.tmp-${process.pid}-${Date.now()}`;
   await fs.writeFile(tmp, JSON.stringify(state, null, 2));
   await fs.rename(tmp, STATE_PATH);
+}
+
+export async function getPdfDestination() {
+  const state = await readState();
+  return state.pdf_destination ?? null;
+}
+
+export async function setPdfDestination(destination) {
+  const state = await readState();
+  state.pdf_destination = destination || null;
+  await writeState(state);
+  return state.pdf_destination;
 }
 
 export async function recordValidatedQuote(quote, invoice) {

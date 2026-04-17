@@ -18,6 +18,32 @@ Outil CLI Node.js dans `/Users/YarmaVideos/Developer/divers/Devis-Qonto/` qui ex
 
 Vérifie que `.env` existe dans le projet. Si `ping` retourne une erreur d'auth, dis à Yannick de vérifier `QONTO_ORGANIZATION_SLUG` / `QONTO_SECRET_KEY` dans `/Users/YarmaVideos/Developer/divers/Devis-Qonto/.env`.
 
+## Destination PDF (obligatoire avant toute création de devis/facture)
+
+La destination des PDF téléchargés est stockée dans `state.json` (champ `pdf_destination`). Avant **chaque** création de devis ou finalisation de facture, applique cette procédure :
+
+1. **Lis la destination actuelle** via `node src/cli.js pdf-dir`.
+   - Si `pdf_destination: null` (première utilisation) → va à l'étape 2
+   - Si `pdf_destination` a une valeur → va à l'étape 3
+
+2. **Première fois — demande la destination** :
+   ```
+   Où sauvegarder les PDF ? Donne-moi le chemin absolu du dossier
+   (ex : /Users/YarmaVideos/Library/CloudStorage/GoogleDrive-.../DEVIS/2026)
+   ```
+   Sur réponse → `node src/cli.js pdf-dir --set "<chemin>"` (les guillemets sont indispensables si le chemin contient des espaces)
+
+3. **Fois suivantes — confirme la destination** : affiche la valeur actuelle dans le résumé avant validation, avec cette formulation :
+   ```
+   PDF sauvegardé dans : /Users/YarmaVideos/Library/CloudStorage/GoogleDrive-.../DEVIS/2026
+   (dis "change le dossier PDF pour X" pour modifier)
+   ```
+   Yannick peut alors demander un changement ponctuel ou permanent.
+
+4. **Si Yannick demande de changer** : `node src/cli.js pdf-dir --set "<nouveau chemin>"` avant de lancer la création.
+
+5. **Après création** : le champ `pdf_path` retourné par `quote-create` / `invoice-finalize` contient le chemin complet du fichier sauvegardé (y compris un éventuel suffixe `_(2)` ou `-v2` si collision ou re-téléchargement). C'est ce chemin que tu utilises pour `open -a "Adobe Acrobat"`.
+
 ## Defaults
 
 | Champ | Valeur par défaut |
@@ -40,7 +66,7 @@ Toutes invoquées depuis `/Users/YarmaVideos/Developer/divers/Devis-Qonto/` :
 node src/cli.js <command> [options]
 ```
 
-**Base** : `ping`
+**Base** : `ping`, `pdf-dir` (`--set "<path>"` pour définir la destination PDF)
 
 **Clients** : `client-list`, `client-find "<nom>"`, `client-get --id`, `client-create --json <file>`, `client-update --id <id> --json <file>`
 

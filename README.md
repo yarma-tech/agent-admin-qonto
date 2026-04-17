@@ -72,7 +72,17 @@ All commands emit JSON on stdout. Errors go to stderr with a non-zero exit code.
 ```bash
 node src/cli.js ping
 node src/cli.js help
+node src/cli.js pdf-dir                                    # show current PDF destination
+node src/cli.js pdf-dir --set "/path/to/your/pdf/folder"   # set PDF destination (quotes required for paths with spaces)
 ```
+
+### PDF destination
+
+Generated PDFs (quotes + finalized invoices) are saved to the folder configured in `state.json` under `pdf_destination`. If unset, PDFs default to the project's `pdf/` folder.
+
+- First-time setup: `node src/cli.js pdf-dir --set "/absolute/path"`
+- Inspect current value: `node src/cli.js pdf-dir`
+- The skill confirms the destination before every create / finalize and lets you change it on the fly.
 
 ### Clients
 

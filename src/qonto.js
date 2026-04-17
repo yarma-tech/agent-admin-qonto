@@ -1,11 +1,17 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getPdfDestination } from './state.js';
 
 const BASE_URL = 'https://thirdparty.qonto.com/v2';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
-const PDF_DIR = path.join(PROJECT_ROOT, 'pdf');
+const DEFAULT_PDF_DIR = path.join(PROJECT_ROOT, 'pdf');
+
+async function resolvePdfDir() {
+  const fromState = await getPdfDestination();
+  return fromState ?? DEFAULT_PDF_DIR;
+}
 
 async function loadEnv() {
   const envPath = path.join(PROJECT_ROOT, '.env');
@@ -114,8 +120,9 @@ export async function downloadFromUrl(url, suggestedName) {
   }
   if (!filename) filename = `document-${Date.now()}.pdf`;
 
-  await fs.mkdir(PDF_DIR, { recursive: true });
-  const finalPath = await resolveNoClobber(path.join(PDF_DIR, filename));
+  const pdfDir = await resolvePdfDir();
+  await fs.mkdir(pdfDir, { recursive: true });
+  const finalPath = await resolveNoClobber(path.join(pdfDir, filename));
   const buffer = Buffer.from(await response.arrayBuffer());
   await fs.writeFile(finalPath, buffer);
   return finalPath;
