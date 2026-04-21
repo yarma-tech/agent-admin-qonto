@@ -26,6 +26,23 @@ I want to describe an invoice in natural language ("1500€ HT for ACME, consult
 
 ---
 
+## Speakinvoices (by Maiya Inc.) — MVP in development
+
+This codebase is also the engine for **Speakinvoices**, a commercial SaaS product by **Maiya Inc.** targeting freelancers and small businesses who want to send quotes and invoices in **2 minutes by voice** — versus the typical **24-48h** workflow today. A quote sent within the hour has 2-3x more chances of being signed than one sent 48h later: that's the differentiator.
+
+The product is built as:
+
+- **Web interface** (Next.js, hosted by Maiya Inc.) — MVP first
+- **Voice-first UX** in the browser via the native Web Speech API + LLM agent (Vercel AI SDK)
+- **Multi-provider** invoicing tools: **Qonto** (France) and **QuickBooks Online** (US/CA/UK/AU) at MVP, with Shine, Pennylane, and Xero in later phases
+- **Native iOS app** in a later phase (post-MVP web validation)
+
+Hosting model: **fully hosted by Maiya Inc.** (SaaS), not self-hosted. The customer connects their Qonto or QuickBooks account via OAuth and uses Speakinvoices through the browser — no install, no infrastructure to manage.
+
+Status: **MVP demo sprint in progress** — a working web demo connected to QuickBooks Online sandbox is targeted for end of April 2026. Validation interviews with target ICP (videographers / motion designers FR) run in parallel: see [docs/validation/](docs/validation/). Full strategic plan: [`.claude/plans/voici-des-fonctionnalit-s-delegated-rossum.md`](.claude/plans/voici-des-fonctionnalit-s-delegated-rossum.md).
+
+---
+
 ## Requirements
 
 - Node.js ≥ 18 (native `fetch` is used — no dependency needed)
@@ -244,59 +261,38 @@ Qonto's `send-a-quote` and `send-a-client-invoice` endpoints only accept `send_t
 
 ## Roadmap
 
-### Phase 2 — Telegram agent
+This engine (Qonto CLI + skill) is the foundation for **Speakinvoices** by Maiya Inc. Full strategic plan: [`.claude/plans/voici-des-fonctionnalit-s-delegated-rossum.md`](.claude/plans/voici-des-fonctionnalit-s-delegated-rossum.md).
 
-A Telegram bot wrapper in `telegram/` that accepts voice and text messages, transcribes voice through Whisper, and routes to the same CLI commands. Same confirmation flow as the Claude Code skill.
+### 🔥 Sprint MVP demo — QuickBooks (5 days, in progress)
 
-### Phase 2 — MCP server (expose write operations over Model Context Protocol)
+A working web demo that creates a real invoice in QuickBooks Online (sandbox) by voice command. Stack: Next.js 15 + Vercel Pro + Supabase + Vercel AI SDK + OpenAI GPT-4o-mini + Web Speech API + Intuit OAuth 2.0. Day-by-day plan in the strategic plan file.
 
-Qonto ships an [official MCP server](https://github.com/qonto/qonto-mcp-server) that covers **read** operations (transactions, invoices list, statements, transfers). It does not expose **write** operations for quotes, invoices, products, or email sending.
+### Phase 1 — Post-demo polish + Qonto integration (weeks 2-4)
 
-This project already implements those write operations. Exposing them through MCP would let any MCP client (Claude Desktop, Cursor, Zed, custom agents) call them without needing a project-local skill. The two MCP servers co-exist : the official one for reads, this one for writes.
+- Polish based on demo feedback
+- Add Qonto provider (reuses `src/qonto.js` wrapped in TypeScript)
+- Multi-tenant auth (Clerk) + onboarding flow
+- Stripe billing (subscription €12-19/month, TBD)
+- Private beta with 5-10 freelancers (recruited via [docs/validation/](docs/validation/))
 
-**Scope**:
-- Wrap the existing CLI commands as MCP tools using [`@modelcontextprotocol/sdk`](https://github.com/modelcontextprotocol/typescript-sdk) (Node.js, stays consistent with the current stack)
-- Expose, at minimum: `quote_create`, `quote_update`, `quote_send`, `quote_validate`, `invoice_create`, `invoice_update`, `invoice_finalize`, `invoice_send`, `invoice_mark_paid`, `invoice_cancel`, `client_create`, `client_update`, `product_create`, `pending_payments`
-- Keep read-only mirrors of list/find commands for convenience, even if they overlap with the official server
-- Package as Docker image (mirroring the official server's distribution model) and publish to `ghcr.io/yarma-tech/agent-admin-qonto`
-- Same credential model (`.env` passed as env vars to the container)
-- Preserve the confirmation-based safety flow: the MCP tool returns a "preview" structured response that the client must confirm before a second "execute" call — since MCP clients can auto-approve tools, this two-step pattern is the server-side guardrail equivalent of the skill's resolve → summarize → confirm loop
+### Phase 2 — Brief PDF + new providers + iOS (months 2-4)
 
-**Migration path**: the Claude Code skill at `.claude/skills/devis-qonto/SKILL.md` stays. Users on Claude Code can keep the skill (FR conversation) or switch to the MCP server (works from any client). The CLI stays as the execution backbone for both.
+- **Brief PDF → invoice**: agent ingests a client brief and proposes a draft (reuses ideas from this README's original "brief-to-quote" plan)
+- **More providers**: Shine (FR), Pennylane (compta, complementary), Xero (UK/AU)
+- **Native iOS app** (SwiftUI) — pushed back from initial plan due to web MVP urgency
 
-**Open question**: is the project better published as two separate entry points (CLI + MCP server) or a single MCP server with an optional `--cli` mode? Decide at implementation time.
+### Phase 3 — RAG + public launch (months 4-6)
 
-### Phase 2 — Brief-to-quote generation with verification
+- RAG over invoice/quote history (premium tier feature)
+- Public marketing launch
+- Metier packs: videographers, motion designers, consultants, BTP artisans
 
-Take a client brief (PDF, email body, meeting notes, plain text) as input and generate a matching quote draft, then run a verification pass that compares the draft back against the brief to surface any discrepancies before the user validates.
+### Phase superseded — original Phase 2 plans
 
-**Flow sketch**:
-1. User provides a brief — path to a file, pasted text, or a Telegram attachment.
-2. The agent extracts from the brief:
-   - Deliverables (what's being produced)
-   - Timeline / dates
-   - Scope constraints and explicit exclusions
-   - Any budget or rate constraint the client mentioned
-   - Client identity, project name
-3. The agent maps each deliverable to a catalog article via `product-find`. Falls back to ad-hoc items with a warning if no match.
-4. The agent drafts a quote payload (uses catalog descriptions by default, applies existing VAT and discount rules).
-5. **Verification pass** — a distinct step that compares the drafted quote back to the original brief. Flags, at minimum:
-   - Deliverables in the brief absent from the quote
-   - Quote items not mentioned in the brief
-   - Quantity mismatches (brief says "a week of editing", quote has 2 days)
-   - Timeline mismatches (brief deadline vs quote expiry)
-   - Budget mismatch (brief says "max 5k", quote totals 7k)
-   - Catalog matches with low confidence (agent guessed)
-6. Present the draft + verification report to the user. The user either validates (→ `quote-create`), adjusts specific items, or requests a re-run with clarifications.
-
-**Open questions to resolve at implementation time**:
-- Does "corresponds to reality" mean *corresponds to the brief* (scope), *corresponds to team capacity* (can we deliver on this timeline?), or *corresponds to historical pricing* (have we done similar at this rate)? Likely the first — to confirm.
-- Should verification use a separate agent/LLM pass to reduce confirmation bias, or is a single-agent structured checklist enough?
-- Batch mode (process multiple briefs in a folder) — yes/no?
-
-**Not in scope for this feature**:
-- Automated quote signing by the client (Qonto handles this through its portal)
-- Contract generation — this is quoting only
+The original roadmap (Telegram long-poll bot, standalone MCP server, brief-to-quote as a CLI feature) is folded into the Speakinvoices phases above:
+- Telegram bot → could resurface as alternate channel in Phase 2+ if demand emerges; not on the critical path
+- MCP server → could resurface for non-Speakinvoices users; not on the critical path
+- Brief-to-quote → Phase 2
 
 ---
 

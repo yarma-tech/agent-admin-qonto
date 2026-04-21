@@ -34,3 +34,6 @@ ehthumbs.db
 # Logs
 logs/
 *.log
+
+# Claude agents working dirs (worktrees, sessions)
+.claude/worktrees/
