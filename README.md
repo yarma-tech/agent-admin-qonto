@@ -165,11 +165,11 @@ Both quotes and invoices support per-item and global discounts using the same sh
 ```json
 {
   "type": "percentage",
-  "value": "10"
+  "value": "0.10"
 }
 ```
 
-`type` is `"percentage"` or `"amount"`. `value` is always a string. You can combine per-item discounts with a global discount. The CLI rejects percentages above 100 and negative values.
+`type` is `"percentage"` or `"amount"`. `value` is always a string. For `percentage`, Qonto expects a **decimal fraction between 0 and 1** — `"0.10"` means 10%, `"0.20"` means 20%. Sending `"10"` or `"20"` is rejected by both the CLI and the Qonto API. For `amount`, it's a normal money string like `"50.00"`. You can combine per-item discounts with a global discount. The CLI rejects percentage values above 1 and negative values.
 
 ### VAT rate format
 

@@ -9,7 +9,7 @@
       "quantity": "1",
       "unit_price": { "value": "2000.00", "currency": "EUR" },
       "vat_rate": "0.085",
-      "discount": { "type": "percentage", "value": "5" }
+      "discount": { "type": "percentage", "value": "0.05" }
     },
     {
       "title": "Consulting — phase 2",
@@ -18,5 +18,5 @@
       "vat_rate": "0.085"
     }
   ],
-  "discount": { "type": "percentage", "value": "10" }
+  "discount": { "type": "percentage", "value": "0.10" }
 }

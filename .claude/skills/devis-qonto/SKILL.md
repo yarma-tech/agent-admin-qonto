@@ -172,10 +172,11 @@ Identique au devis, mais :
 
 ### 5. Appliquer une remise
 
-- **Par item** : dans chaque item ajouter `"discount": { "type": "percentage", "value": "10" }` ou `"type": "amount", "value": "50.00"`
-- **Globale** : au niveau racine du payload : `"discount": { "type": "percentage", "value": "5" }`
+- **Format pourcentage Qonto** : fraction décimale entre 0 et 1 (⚠️ PAS un nombre 0-100). `"0.10"` = 10%, `"0.20"` = 20%, `"0.05"` = 5%. Une valeur > 1 est rejetée côté CLI et côté API Qonto.
+- **Par item** : dans chaque item ajouter `"discount": { "type": "percentage", "value": "0.10" }` (10%) ou `"type": "amount", "value": "50.00"` (50€)
+- **Globale** : au niveau racine du payload : `"discount": { "type": "percentage", "value": "0.05" }` (5%)
 - **Cumulables** : un item peut avoir sa remise + le doc peut avoir une remise globale
-- **Résumé explicite obligatoire** :
+- **Résumé explicite obligatoire** (affichage utilisateur en % humain, mais payload toujours en fraction) :
   ```
   HT brut : 2000.00€
   Remise item (5% sur Prestation A) : -25.00€
@@ -184,7 +185,7 @@ Identique au devis, mais :
   TVA 8.5% : 151.09€
   TTC : 1928.59€
   ```
-- **Garde-fous** : le CLI refuse les % > 100 et les montants négatifs. Si Yannick demande une remise > 100%, dis-lui que c'est impossible.
+- **Garde-fous** : le CLI refuse les pourcentages > 1 (avec message indiquant le format attendu) et les montants négatifs. Si Yannick dit "10% de remise", tu dois envoyer `"0.10"`, pas `"10"`.
 
 ### 6. Envoi email (devis ou facture)
 
@@ -259,7 +260,7 @@ Identique au devis, mais :
 5. **Produit update/delete via API = 404 sur ce compte Qonto** → oriente vers l'interface web.
 6. **Pas de `quote-delete` / `invoice-delete` / `client-delete`** exposés dans le CLI. Si Yannick demande, oriente vers l'interface web Qonto.
 7. **Dates relatives** ("mars", "semaine prochaine") : résous en ISO (`YYYY-MM-DD`) avant l'appel CLI. Date courante = 2026-04-16.
-8. **Montants** toujours en string (`"1500.00"`), **TVA en fraction décimale** (`"0.085"` pour 8.5%, `"0.2"` pour 20%, `"0"` pour exonéré), remises en string (`"10"`).
+8. **Montants** toujours en string (`"1500.00"`), **TVA en fraction décimale** (`"0.085"` pour 8.5%, `"0.2"` pour 20%, `"0"` pour exonéré), **remises pourcentage en fraction décimale 0-1** (`"0.10"` pour 10%, `"0.20"` pour 20% — jamais `"10"` ou `"20"`), remises montant en string normal (`"50.00"`).
 
 ## Gestion des erreurs
 
