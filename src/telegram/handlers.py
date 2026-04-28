@@ -1,5 +1,8 @@
 from telegram.ext import ContextTypes
 
+from src.agent.loop import run_agent
+from src.db import async_session_factory
+from src.telegram.auth import get_or_create_tenant
 from telegram import Update
 
 
@@ -13,9 +16,18 @@ async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    text = update.message.text if update.message else ""
+    if not update.message or not update.effective_user or not update.effective_chat:
+        return
+
+    text = update.message.text or ""
     chat_id = update.effective_chat.id
-    await context.bot.send_message(
-        chat_id=chat_id,
-        text=f"Recu : {text}",
-    )
+
+    async with async_session_factory() as session:
+        tenant, _user = await get_or_create_tenant(
+            session,
+            update.effective_user.id,
+            update.effective_user.first_name or "inconnu",
+        )
+        response = await run_agent(session, tenant.id, text)
+
+    await context.bot.send_message(chat_id=chat_id, text=response)
