@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main", "develop"]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dev dependencies
+        run: pip install ".[dev]"
+
+      - name: Run ruff check
+        run: ruff check src/ tests/
+
+      - name: Run ruff format check
+        run: ruff format --check src/ tests/
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: agent_qonto
+          POSTGRES_USER: agent_qonto
+          POSTGRES_PASSWORD: agent_qonto
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U agent_qonto -d agent_qonto"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://agent_qonto:agent_qonto@localhost:5432/agent_qonto
+      REDIS_URL: redis://localhost:6379/0
+      TELEGRAM_BOT_TOKEN: ""
+      ANTHROPIC_API_KEY: ""
+      OPENAI_API_KEY: ""
+      STRIPE_SECRET_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      WEBHOOK_BASE_URL: "http://localhost:8000"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install ".[dev]"
+
+      - name: Run tests
+        run: pytest tests/ -v
