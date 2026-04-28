@@ -2,9 +2,11 @@ import asyncio
 from logging.config import fileConfig
 
 from alembic import context
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from src.config import settings
+from src.models import Base
 
 # Alembic Config object — gives access to values in alembic.ini
 config = context.config
@@ -13,8 +15,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Models not yet defined — set to None until Task 4 (DB schema)
-target_metadata = None
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
@@ -31,6 +32,7 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection):
+    connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     context.configure(connection=connection, target_metadata=target_metadata)
     with context.begin_transaction():
         context.run_migrations()
