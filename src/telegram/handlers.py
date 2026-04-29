@@ -1,10 +1,36 @@
+import anthropic
 from telegram.ext import ContextTypes
 
 from src.agent.loop import run_agent
 from src.agent.tools.transcribe import transcribe_voice
+from src.config import settings
 from src.db import async_session_factory
+from src.rag.entity_detector import should_index
+from src.rag.indexer import index_text
 from src.telegram.auth import get_or_create_tenant
 from telegram import Update
+
+
+async def process_voice_memo(session, tenant_id, transcription: str) -> str | None:
+    """Process transcription as a business memo. Returns confirmatory summary or None."""
+    if not should_index(transcription):
+        return None
+
+    # Index in RAG
+    await index_text(session, tenant_id, transcription)
+
+    # Generate confirmatory summary
+    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+    response = await client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=200,
+        system=(
+            "Tu résumes des memos vocaux business en une phrase confirmative courte commençant par 'Note :'. "
+            "Si une info critique est ambiguë (ex: TTC ou HT?), ajoute une question."
+        ),
+        messages=[{"role": "user", "content": f"Résume ce memo : {transcription}"}],
+    )
+    return response.content[0].text
 
 
 async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -53,6 +79,14 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             update.effective_user.id,
             update.effective_user.first_name or "inconnu",
         )
+
+        # Try memo pipeline first
+        memo_summary = await process_voice_memo(session, tenant.id, text)
+        if memo_summary:
+            await context.bot.send_message(chat_id=chat_id, text=memo_summary)
+            return
+
+        # If not a memo, treat as regular command → agent loop
         response = await run_agent(session, tenant.id, text)
 
     await context.bot.send_message(chat_id=chat_id, text=response)
